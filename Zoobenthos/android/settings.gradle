@@ -1,0 +1,3 @@
+rootProject.name = 'Zoobenthos'
+
+include ':app'
