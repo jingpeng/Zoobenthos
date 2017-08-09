@@ -1,53 +1,60 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- * @flow
- */
-
-import React, { Component } from 'react';
+import React, { Component } from 'react'
 import {
-  AppRegistry,
-  StyleSheet,
-  Text,
-  View
-} from 'react-native';
+  AppRegistry
+} from 'react-native'
+import {
+  addNavigationHelpers,
+  StackNavigator
+} from 'react-navigation'
+import { action, observable } from 'mobx'
+import { observer } from 'mobx-react'
 
-export default class Zoobenthos extends Component {
-  render() {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.welcome}>
-          Welcome to React Native!
-        </Text>
-        <Text style={styles.instructions}>
-          To get started, edit index.android.js
-        </Text>
-        <Text style={styles.instructions}>
-          Double tap R on your keyboard to reload,{'\n'}
-          Shake or press menu button for dev menu
-        </Text>
-      </View>
-    );
+import MainScreen from './app/screen/main-screen'
+import TestScreen from './app/screen/test-screen'
+
+const AppNavigator = StackNavigator({
+  Main: { screen: MainScreen },
+  Test: { screen: TestScreen },
+}, {
+  initialRouteName: 'Main'
+})
+
+class NavigationStore {
+  @observable headerTitle = "Main"
+  @observable.ref navigationState = {
+    index: 0,
+    routes: [
+      { key: "Main", routeName: "Main" },
+    ],
+  }
+
+  // NOTE: the second param, is to avoid stacking and reset the nav state
+  @action dispatch = (action, stackNavState = true) => {
+    const previousNavState = stackNavState ? this.navigationState : null
+    return this.navigationState = AppNavigator
+        .router
+        .getStateForAction(action, previousNavState)
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  },
-  welcome: {
-    fontSize: 20,
-    textAlign: 'center',
-    margin: 10,
-  },
-  instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
-  },
-});
+// NOTE: the top level component must be a reactive component
+@observer
+class Zoobenthos extends React.Component {
+  constructor(props, context) {
+    super(props, context)
+    // initialize the navigation store
+    this.store = new NavigationStore()
+  }
 
-AppRegistry.registerComponent('Zoobenthos', () => Zoobenthos);
+  render() {
+    // patch over the navigation property with the new dispatch and mobx observed state
+    return (
+      <AppNavigator navigation={addNavigationHelpers({
+        dispatch: this.store.dispatch,
+        state: this.store.navigationState,
+      })}/>
+    )
+  }
+}
+
+AppRegistry.registerComponent('Zoobenthos', () => Zoobenthos)
